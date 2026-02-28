@@ -1,0 +1,22 @@
+{
+    "name": "Nox.Mirror",
+    "rootNamespace": "",
+    "references": [
+        "UniTask",
+        "Unity.Mathematics",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Nox.CCK",
+        "Nox.CCK.Settings",
+        "Nox.Settings",
+        "Nox.CCK.Mirror"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
