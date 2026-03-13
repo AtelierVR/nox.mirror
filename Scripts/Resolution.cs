@@ -8,10 +8,12 @@ namespace Nox.Mirror.Settings {
 		public override string[] GetPath()
 			=> new[] { "graphic", "mirror", "resolution" };
 
+		public override int GetOrder() => 3000;
+
 		private static string[] GetConfigPath()
 			=> new[] { "settings", "graphic", "mirror", "resolution" };
 
-		public override GameObject GetPrefab()
+		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/range.prefab");
 
 		public Resolution() {
@@ -32,7 +34,7 @@ namespace Nox.Mirror.Settings {
 			}
 		}
 
-		public override void OnValueChanged(float value) {
+		override protected void OnValueChanged(float value) {
 			Value = value;
 		}
 	}
