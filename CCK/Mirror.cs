@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.XR;
 
 namespace Nox.CCK.Mirror {
 	/// <summary>
@@ -189,7 +187,7 @@ namespace Nox.CCK.Mirror {
 				QualitySettings.pixelLightCount = 0;
 
 			try {
-				if (cam.stereoEnabled && XRSettings.enabled) {
+				if (cam.stereoEnabled) {
 					// VR mode - render both eyes
 					RenderEye(context, cam, Camera.StereoscopicEye.Left, _reflectionTextureLeft);
 					RenderEye(context, cam, Camera.StereoscopicEye.Right, _reflectionTextureRight);
@@ -221,10 +219,11 @@ namespace Nox.CCK.Mirror {
 			Vector3   camPos;
 			Matrix4x4 projMatrix;
 
-			if (sourceCam.stereoEnabled && XRSettings.enabled) {
-				camPos = sourceCam.transform.TransformPoint(XRSettings.eyeTextureWidth > 0
-					? (eye == Camera.StereoscopicEye.Left ? new Vector3(-0.032f, 0, 0) : new Vector3(0.032f, 0, 0))
-					: Vector3.zero);
+			if (sourceCam.stereoEnabled) {
+				camPos = sourceCam.transform.TransformPoint(
+					eye == Camera.StereoscopicEye.Left 
+						? new Vector3(-0.032f, 0, 0) 
+						: new Vector3(0.032f, 0, 0));
 				projMatrix = sourceCam.GetStereoProjectionMatrix(eye);
 			} else {
 				camPos     = sourceCam.transform.position;
