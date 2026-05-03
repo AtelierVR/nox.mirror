@@ -1,3 +1,4 @@
+using Nox.CCK.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -144,7 +145,7 @@ namespace Nox.CCK.Mirror {
 			}
 		}
 
-		private void OnBeginCameraRendering(ScriptableRenderContext context, Camera cam) {
+		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam) {
 			// Only render for Game/SceneView cameras
 			if (cam.cameraType != CameraType.Game && cam.cameraType != CameraType.SceneView)
 				return;
@@ -168,13 +169,13 @@ namespace Nox.CCK.Mirror {
 			s_IsRendering = true;
 
 			try {
-				RenderMirror(context, cam);
+				RenderMirror(cam);
 			} finally {
 				s_IsRendering = false;
 			}
 		}
 
-		private void RenderMirror(ScriptableRenderContext context, Camera cam) {
+		private void RenderMirror(Camera cam) {
 			EnsureMirrorCamera();
 			EnsureRenderTextures(cam);
 
@@ -189,8 +190,8 @@ namespace Nox.CCK.Mirror {
 			try {
 				if (cam.stereoEnabled) {
 					// VR mode - render both eyes
-					RenderEye(context, cam, Camera.StereoscopicEye.Left, _reflectionTextureLeft);
-					RenderEye(context, cam, Camera.StereoscopicEye.Right, _reflectionTextureRight);
+					RenderEye(cam, Camera.StereoscopicEye.Left, _reflectionTextureLeft);
+					RenderEye(cam, Camera.StereoscopicEye.Right, _reflectionTextureRight);
 
 					if (!_texturesAssigned) {
 						_propertyBlock.SetTexture(LeftEyeTextureId, _reflectionTextureLeft);
@@ -200,7 +201,7 @@ namespace Nox.CCK.Mirror {
 					}
 				} else {
 					// Non-VR mode
-					RenderEye(context, cam, Camera.StereoscopicEye.Left, _reflectionTextureLeft);
+					RenderEye(cam, Camera.StereoscopicEye.Left, _reflectionTextureLeft);
 
 					if (!_texturesAssigned) {
 						_propertyBlock.SetTexture(LeftEyeTextureId, _reflectionTextureLeft);
@@ -215,7 +216,7 @@ namespace Nox.CCK.Mirror {
 			}
 		}
 
-		private void RenderEye(ScriptableRenderContext context, Camera sourceCam, Camera.StereoscopicEye eye, RenderTexture target) {
+		private void RenderEye(Camera sourceCam, Camera.StereoscopicEye eye, RenderTexture target) {
 			Vector3   camPos;
 			Matrix4x4 projMatrix;
 
@@ -257,10 +258,17 @@ namespace Nox.CCK.Mirror {
 			_mirrorCamera.cullingMask   = _reflectionLayers & ~(1 << 4); // Exclude Water layer
 			_mirrorCamera.targetTexture = target;
 
+			// Restore any CameraChop-hidden bones so the mirror sees the full avatar,
+			// then re-hide them afterwards for the primary first-person camera.
+			CameraChop.RestoreAllScales();
+
 			// Render with inverted culling
 			GL.invertCulling = true;
-			UniversalRenderPipeline.RenderSingleCamera(context, _mirrorCamera);
+			RenderPipeline.SubmitRenderRequest(_mirrorCamera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
 			GL.invertCulling = false;
+
+			// Re-apply first-person bone hiding so the source camera render is unaffected.
+			CameraChop.HideAllForCamera(sourceCam);
 		}
 
 		private static Matrix4x4 CalculateReflectionMatrix(Vector4 plane) {
