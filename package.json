@@ -1,5 +1,6 @@
 {
   "name": "nox.mirror",
   "displayName": "Nox - Mirror",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "description": "In-world mirror rendering for avatar and environment reflection."
 }
