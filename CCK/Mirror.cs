@@ -217,19 +217,16 @@ namespace Nox.CCK.Mirror {
 		}
 
 		private void RenderEye(Camera sourceCam, Camera.StereoscopicEye eye, RenderTexture target) {
-			Vector3   camPos;
-			Matrix4x4 projMatrix;
+			var stereo = sourceCam.stereoEnabled;
 
-			if (sourceCam.stereoEnabled) {
-				camPos = sourceCam.transform.TransformPoint(
-					eye == Camera.StereoscopicEye.Left 
-						? new Vector3(-0.032f, 0, 0) 
-						: new Vector3(0.032f, 0, 0));
-				projMatrix = sourceCam.GetStereoProjectionMatrix(eye);
-			} else {
-				camPos     = sourceCam.transform.position;
-				projMatrix = sourceCam.projectionMatrix;
-			}
+			// Use the eye's own view/projection pair (as supplied by the XR provider)
+			// so the mirror render exactly matches the screen space the main camera draws.
+			var eyeView = stereo
+				? sourceCam.GetStereoViewMatrix(eye)
+				: sourceCam.worldToCameraMatrix;
+			var projMatrix = stereo
+				? sourceCam.GetStereoProjectionMatrix(eye)
+				: sourceCam.projectionMatrix;
 
 			var mirrorPos    = transform.position;
 			var mirrorNormal = transform.up;
@@ -241,14 +238,17 @@ namespace Nox.CCK.Mirror {
 			// Calculate reflection matrix
 			var reflectionMatrix = CalculateReflectionMatrix(reflectionPlane);
 
-			// Reflect camera position
-			var reflectedPos = reflectionMatrix.MultiplyPoint(camPos);
+			// Reflect the eye's world-space position (extracted from the eye view matrix)
+			// for a consistent camera position (used by shading's cameraPos).
+			var eyePos       = eyeView.inverse.MultiplyPoint(Vector3.zero);
+			var reflectedPos = reflectionMatrix.MultiplyPoint(eyePos);
 
-			// Setup mirror camera
+			// Setup mirror camera: reflect the world, then view it through the eye's
+			// own matrices so per-eye IPD is preserved without any double/triple counting.
 			_mirrorCamera.transform.position  = reflectedPos;
 			_mirrorCamera.transform.rotation  = sourceCam.transform.rotation;
 			_mirrorCamera.projectionMatrix    = projMatrix;
-			_mirrorCamera.worldToCameraMatrix = sourceCam.worldToCameraMatrix * reflectionMatrix;
+			_mirrorCamera.worldToCameraMatrix = eyeView * reflectionMatrix;
 
 			// Oblique projection for near clipping at mirror plane
 			var clipPlane = CameraSpacePlane(_mirrorCamera, mirrorPos, mirrorNormal, 1.0f);

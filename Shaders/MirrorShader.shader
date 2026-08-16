@@ -80,9 +80,10 @@ Shader "Nox/MirrorShader"
                 
                 half4 reflectionColor;
                 
-                // Detect which eye we're rendering for using projection matrix
-                // Left eye has projection[0][2] <= 0, right eye has > 0
-                if (unity_CameraProjection[0][2] <= 0)
+                // Pick the correct eye texture using the stereo eye index instead of
+                // the projection[0][2] sign (which is platform-dependent and identical
+                // for both eyes in single-pass instanced). 0 = left, 1 = right.
+                if (unity_StereoEyeIndex == 0)
                 {
                     reflectionColor = SAMPLE_TEXTURE2D(_LeftEyeTexture, sampler_LeftEyeTexture, screenUV);
                 }
