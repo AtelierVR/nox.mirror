@@ -2,6 +2,7 @@ using Nox.CCK.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.XR;
 
 namespace Nox.CCK.Mirror {
 	/// <summary>
@@ -106,8 +107,18 @@ namespace Nox.CCK.Mirror {
 		}
 
 		private void EnsureRenderTextures(Camera cam) {
-			var w = Mathf.Clamp((int)(cam.pixelWidth * ResolutionScale), 64, _maxResolution);
-			var h = Mathf.Clamp((int)(cam.pixelHeight * ResolutionScale), 64, _maxResolution);
+			int sourceWidth, sourceHeight;
+			if (cam.stereoEnabled) {
+				var eyeDesc = XRSettings.eyeTextureDesc;
+				sourceWidth  = eyeDesc.width  > 0 ? eyeDesc.width  : cam.pixelWidth;
+				sourceHeight = eyeDesc.height > 0 ? eyeDesc.height : cam.pixelHeight;
+			} else {
+				sourceWidth  = cam.pixelWidth;
+				sourceHeight = cam.pixelHeight;
+			}
+
+			var w = Mathf.Clamp((int)(sourceWidth * ResolutionScale), 64, _maxResolution);
+			var h = Mathf.Clamp((int)(sourceHeight * ResolutionScale), 64, _maxResolution);
 
 			// Check if we need to update textures
 			var sizeChanged = (_lastTextureWidth != w || _lastTextureHeight != h);
