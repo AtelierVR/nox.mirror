@@ -55,6 +55,11 @@
       "id": "com.unity.modules.xr",
       "type": "depends",
       "register": "upm+com.unity.modules.xr@1.0.0"
+    },
+    {
+      "id": "com.unity.modules.vr",
+      "type": "depends",
+      "register": "upm+com.unity.modules.vr@1.0.0"
     }
   ]
 }
