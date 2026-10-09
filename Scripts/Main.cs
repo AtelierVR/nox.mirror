@@ -34,7 +34,7 @@ namespace Nox.Mirror {
 
 		public void OnDisposeMain() {
 			foreach (var setting in Settings)
-				SettingAPI.Remove(setting.GetPath());
+				SettingAPI.Remove(setting.Path);
 			Settings = Array.Empty<IHandler>();
 			LanguageManager.RemovePack(_lang);
 			CoreAPI = null;

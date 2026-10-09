@@ -5,10 +5,10 @@ using UnityEngine;
 
 namespace Nox.Mirror.Settings {
 	public sealed class Resolution : RangeHandler {
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "graphic", "mirror", "resolution" };
 
-		public override int GetOrder() => 3000;
+		public override int Order => 3000;
 
 		private static string[] GetConfigPath()
 			=> new[] { "settings", "graphic", "mirror", "resolution" };
@@ -20,7 +20,7 @@ namespace Nox.Mirror.Settings {
 			SetRange(MirrorSettings.MinimalResolution, MirrorSettings.MaximalResolution);
 			SetStep(0.001f);
 			SetValue(Value);
-			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
+			SetLabelKey($"settings.entry.{string.Join(".", Path)}.label");
 			SetValueKey("settings.range.value.percent");
 		}
 
