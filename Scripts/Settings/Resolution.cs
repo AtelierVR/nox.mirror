@@ -6,12 +6,12 @@ using UnityEngine;
 namespace Nox.Mirror.Settings {
 	public sealed class Resolution : RangeHandler {
 		public override string[] Path
-			=> new[] { "graphic", "mirror", "resolution" };
+			=> new[] { "mirror", "general", "resolution" };
 
-		public override int Order => 3000;
+		public override int Order => 45000;
 
 		private static string[] GetConfigPath()
-			=> new[] { "settings", "graphic", "mirror", "resolution" };
+			=> new[] { "settings", "mirror", "general", "resolution" };
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/range.prefab");
@@ -24,7 +24,7 @@ namespace Nox.Mirror.Settings {
 			SetValueKey("settings.range.value.percent");
 		}
 
-		public static float Value {
+		public static new float Value {
 			get => Config.Load().Get(GetConfigPath(), MirrorSettings.Resolution);
 			set {
 				var config = Config.Load();
