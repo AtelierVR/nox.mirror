@@ -14,19 +14,38 @@ namespace Nox.CCK.Mirror {
 	[RequireComponent(typeof(Renderer))]
 	public class Mirror : MonoBehaviour {
 		[Header("Mirror Settings")]
-		[SerializeField] private bool _useResolutionSettings = true;
+		[SerializeField, Tooltip("Take the resolution from the mirror settings of the session. Turn it off to keep the resolution of this mirror only (a world creator's choice) - a Personal Mirror ignores the switch and always follows the settings.")]
+		private bool _useResolutionSettings = true;
 
 		[Range(MirrorSettings.MinimalResolution, MirrorSettings.MaximalResolution)]
 		[SerializeField] private float _resolutionScale = MirrorSettings.Resolution;
 
-		public float ResolutionScale
+		[SerializeField, Tooltip("Take the reflection layers from the mirror settings of the session. Turn it off to keep the layers of this mirror only (a world creator's choice) - a Personal Mirror ignores the switch and always follows the settings.")]
+		private bool _useReflectionLayersSettings = true;
+
+		[SerializeField, Tooltip("Longest side of the reflection textures, in pixels.")]
+		private int _maxResolution = 2048;
+
+		[SerializeField, Tooltip("Layers the reflection camera renders when the mirror does not take them from the settings.")]
+		private LayerMask _reflectionLayers = -1;
+
+		/// <summary>
+		/// Scale applied to the screen resolution of the reflection: the one of <see cref="MirrorSettings"/> when
+		/// <c>_useResolutionSettings</c> is on, the local value otherwise.
+		/// </summary>
+		public virtual float ResolutionScale
 			=> _useResolutionSettings
 				? MirrorSettings.Resolution
 				: _resolutionScale;
 
-		[SerializeField] private int _maxResolution = 2048;
-
-		[SerializeField] private LayerMask _reflectionLayers = -1;
+		/// <summary>
+		/// Layers the reflection camera renders: the ones of <see cref="MirrorSettings"/> when
+		/// <c>_useReflectionLayersSettings</c> is on, the local mask otherwise.
+		/// </summary>
+		public virtual LayerMask ReflectionLayers
+			=> _useReflectionLayersSettings
+				? MirrorSettings.ReflectionLayers
+				: _reflectionLayers;
 
 		[Header("Performance")]
 		[SerializeField] private bool _disablePixelLights = true;
@@ -52,17 +71,31 @@ namespace Nox.CCK.Mirror {
 		private static bool s_IsRendering;
 		private const string MirrorShaderName = "Nox/MirrorShader";
 
-		private void OnEnable() {
-			_renderer      = GetComponent<Renderer>();
+		/// <summary>Frustum planes of the camera being rendered, reused (CalculateFrustumPlanes allocates).</summary>
+		private readonly Plane[] _frustum = new Plane[6];
+
+		/// <summary>
+		/// Forces the settings of the session on this mirror, whatever its own switches say: what the personal
+		/// mirror needs, since the sliders of the settings are the only thing that drives it.
+		/// </summary>
+		/// <param name="resolution">Whether the resolution follows the settings.</param>
+		/// <param name="layers">Whether the reflection layers follow the settings.</param>
+		public void UseSettings(bool resolution = true, bool layers = true) {
+			_useResolutionSettings = resolution;
+			_useReflectionLayersSettings = layers;
+		}
+
+		protected virtual void OnEnable() {
+			_renderer = GetComponent<Renderer>();
 			_propertyBlock = new MaterialPropertyBlock();
 
 			EnsureMirrorMaterial();
 
-			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+			RenderOrder.Subscribe(OnBeginCameraRendering, RenderPhase.Capture);
 		}
 
 		private void OnDisable() {
-			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+			RenderOrder.Unsubscribe(OnBeginCameraRendering);
 			Cleanup();
 		}
 
@@ -82,7 +115,7 @@ namespace Nox.CCK.Mirror {
 			}
 
 			_mirrorMaterial = new Material(shader) {
-				name      = "Mirror Material",
+				name = "Mirror Material",
 				hideFlags = HideFlags.DontSave
 			};
 
@@ -96,32 +129,38 @@ namespace Nox.CCK.Mirror {
 			var go = new GameObject("Mirror Camera", typeof(Camera));
 			go.hideFlags = HideFlags.HideAndDontSave;
 
-			_mirrorCamera         = go.GetComponent<Camera>();
+			_mirrorCamera = go.GetComponent<Camera>();
 			_mirrorCamera.enabled = false;
+			_mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
 
 			// Add URP camera data
 			var urpData = go.AddComponent<UniversalAdditionalCameraData>();
-			urpData.renderShadows       = false;
+			urpData.renderShadows = false;
 			urpData.requiresColorOption = CameraOverrideOption.Off;
 			urpData.requiresDepthOption = CameraOverrideOption.Off;
+			urpData.renderPostProcessing = false;
 		}
 
 		private void EnsureRenderTextures(Camera cam) {
 			int sourceWidth, sourceHeight;
 			if (cam.stereoEnabled) {
 				var eyeDesc = XRSettings.eyeTextureDesc;
-				sourceWidth  = eyeDesc.width  > 0 ? eyeDesc.width  : cam.pixelWidth;
+				sourceWidth = eyeDesc.width > 0 ? eyeDesc.width : cam.pixelWidth;
 				sourceHeight = eyeDesc.height > 0 ? eyeDesc.height : cam.pixelHeight;
 			} else {
-				sourceWidth  = cam.pixelWidth;
+				sourceWidth = cam.pixelWidth;
 				sourceHeight = cam.pixelHeight;
 			}
 
-			var w = Mathf.Clamp((int)(sourceWidth * ResolutionScale), 64, _maxResolution);
-			var h = Mathf.Clamp((int)(sourceHeight * ResolutionScale), 64, _maxResolution);
+			var maxSize = cam.stereoEnabled
+				? Mathf.Min(_maxResolution, MirrorSettings.StereoMaxResolution)
+				: _maxResolution;
+
+			var w = Mathf.Clamp((int)(sourceWidth * ResolutionScale), 64, maxSize);
+			var h = Mathf.Clamp((int)(sourceHeight * ResolutionScale), 64, maxSize);
 
 			// Check if we need to update textures
-			var sizeChanged = (_lastTextureWidth != w || _lastTextureHeight != h);
+			var sizeChanged = _lastTextureWidth != w || _lastTextureHeight != h;
 
 			if (!_reflectionTextureLeft || sizeChanged) {
 				if (_reflectionTextureLeft) {
@@ -130,12 +169,12 @@ namespace Nox.CCK.Mirror {
 				}
 
 				_reflectionTextureLeft = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) {
-					name      = "Mirror Left",
+					name = "Mirror Left",
 					hideFlags = HideFlags.DontSave
 				};
 
-				_texturesAssigned  = false;
-				_lastTextureWidth  = w;
+				_texturesAssigned = false;
+				_lastTextureWidth = w;
 				_lastTextureHeight = h;
 			}
 
@@ -147,7 +186,7 @@ namespace Nox.CCK.Mirror {
 					}
 
 					_reflectionTextureRight = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) {
-						name      = "Mirror Right",
+						name = "Mirror Right",
 						hideFlags = HideFlags.DontSave
 					};
 
@@ -156,7 +195,7 @@ namespace Nox.CCK.Mirror {
 			}
 		}
 
-		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam) {
+		private void OnBeginCameraRendering(Camera cam) {
 			// Only render for Game/SceneView cameras
 			if (cam.cameraType != CameraType.Game && cam.cameraType != CameraType.SceneView)
 				return;
@@ -177,6 +216,10 @@ namespace Nox.CCK.Mirror {
 			if (!_renderer.isVisible)
 				return;
 
+			GeometryUtility.CalculateFrustumPlanes(cam, _frustum);
+			if (!GeometryUtility.TestPlanesAABB(_frustum, _renderer.bounds))
+				return;
+
 			s_IsRendering = true;
 
 			try {
@@ -190,9 +233,9 @@ namespace Nox.CCK.Mirror {
 			EnsureMirrorCamera();
 			EnsureRenderTextures(cam);
 
-			// Copy camera settings
 			_mirrorCamera.CopyFrom(cam);
 			_mirrorCamera.enabled = false;
+			_mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
 
 			var pixelLightCount = QualitySettings.pixelLightCount;
 			if (_disablePixelLights)
@@ -230,20 +273,22 @@ namespace Nox.CCK.Mirror {
 		private void RenderEye(Camera sourceCam, Camera.StereoscopicEye eye, RenderTexture target) {
 			var stereo = sourceCam.stereoEnabled;
 
-			// Use the eye's own view/projection pair (as supplied by the XR provider)
-			// so the mirror render exactly matches the screen space the main camera draws.
 			var eyeView = stereo
 				? sourceCam.GetStereoViewMatrix(eye)
 				: sourceCam.worldToCameraMatrix;
+
+			if (stereo && RenderOrder.TryGetFrameViewMatrix(sourceCam, out var frameView))
+				eyeView = sourceCam.worldToCameraMatrix * frameView.inverse * eyeView;
+
 			var projMatrix = stereo
 				? sourceCam.GetStereoProjectionMatrix(eye)
 				: sourceCam.projectionMatrix;
 
-			var mirrorPos    = transform.position;
+			var mirrorPos = transform.position;
 			var mirrorNormal = transform.up;
 
 			// Calculate reflection plane
-			var d               = -Vector3.Dot(mirrorNormal, mirrorPos) - _clipPlaneOffset;
+			var d = -Vector3.Dot(mirrorNormal, mirrorPos) - _clipPlaneOffset;
 			var reflectionPlane = new Vector4(mirrorNormal.x, mirrorNormal.y, mirrorNormal.z, d);
 
 			// Calculate reflection matrix
@@ -251,22 +296,22 @@ namespace Nox.CCK.Mirror {
 
 			// Reflect the eye's world-space position (extracted from the eye view matrix)
 			// for a consistent camera position (used by shading's cameraPos).
-			var eyePos       = eyeView.inverse.MultiplyPoint(Vector3.zero);
+			var eyePos = eyeView.inverse.MultiplyPoint(Vector3.zero);
 			var reflectedPos = reflectionMatrix.MultiplyPoint(eyePos);
 
 			// Setup mirror camera: reflect the world, then view it through the eye's
 			// own matrices so per-eye IPD is preserved without any double/triple counting.
-			_mirrorCamera.transform.position  = reflectedPos;
-			_mirrorCamera.transform.rotation  = sourceCam.transform.rotation;
-			_mirrorCamera.projectionMatrix    = projMatrix;
+			_mirrorCamera.transform.position = reflectedPos;
+			_mirrorCamera.transform.rotation = sourceCam.transform.rotation;
+			_mirrorCamera.projectionMatrix = projMatrix;
 			_mirrorCamera.worldToCameraMatrix = eyeView * reflectionMatrix;
 
 			// Oblique projection for near clipping at mirror plane
-			var clipPlane = CameraSpacePlane(_mirrorCamera, mirrorPos, mirrorNormal, 1.0f);
+			var clipPlane = CameraHelper.CameraSpacePlane(_mirrorCamera, mirrorPos, mirrorNormal, _clipPlaneOffset, 1.0f);
 			_mirrorCamera.projectionMatrix = _mirrorCamera.CalculateObliqueMatrix(clipPlane);
 
-			// Render settings
-			_mirrorCamera.cullingMask   = _reflectionLayers & ~(1 << 4); // Exclude Water layer
+			// Render settings: the layers are the ones the player picked, nothing is forced out here.
+			_mirrorCamera.cullingMask = ReflectionLayers.value;
 			_mirrorCamera.targetTexture = target;
 
 			// Restore any CameraChop-hidden bones so the mirror sees the full avatar,
@@ -308,14 +353,6 @@ namespace Nox.CCK.Mirror {
 			return m;
 		}
 
-		private Vector4 CameraSpacePlane(Camera cam, Vector3 pos, Vector3 normal, float sideSign) {
-			var offsetPos  = pos + normal * _clipPlaneOffset;
-			var worldToCam = cam.worldToCameraMatrix;
-			var cpos       = worldToCam.MultiplyPoint(offsetPos);
-			var cnormal    = worldToCam.MultiplyVector(normal).normalized * sideSign;
-			return new Vector4(cnormal.x, cnormal.y, cnormal.z, -Vector3.Dot(cpos, cnormal));
-		}
-
 		private void Cleanup() {
 			if (_mirrorCamera) {
 				DestroyImmediate(_mirrorCamera.gameObject);
@@ -335,7 +372,7 @@ namespace Nox.CCK.Mirror {
 			}
 		}
 
-		#if UNITY_EDITOR
+#if UNITY_EDITOR
 		private void Reset() {
 			_renderer = GetComponent<Renderer>();
 			EnsureMirrorMaterial();
@@ -347,7 +384,7 @@ namespace Nox.CCK.Mirror {
 
 		private void OnDrawGizmosSelected() {
 			// Draw mirror plane
-			Gizmos.color  = Color.cyan;
+			Gizmos.color = Color.cyan;
 			Gizmos.matrix = transform.localToWorldMatrix;
 			Gizmos.DrawWireCube(Vector3.zero, new Vector3(1, 0.01f, 1));
 
@@ -356,6 +393,6 @@ namespace Nox.CCK.Mirror {
 			Gizmos.DrawLine(Vector3.zero, Vector3.up * 0.5f);
 			Gizmos.DrawSphere(Vector3.up * 0.5f, 0.02f);
 		}
-		#endif
+#endif
 	}
 }

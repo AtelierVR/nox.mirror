@@ -5,7 +5,9 @@
         "UniTask",
         "Unity.Mathematics",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Nox.CCK"
+        "Nox.CCK",
+        "Nox.Interactions",
+        "Nox.CCK.Interactions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

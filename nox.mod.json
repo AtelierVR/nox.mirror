@@ -26,6 +26,9 @@
   "entrypoints": {
     "main": [
       "Nox.Mirror.Main"
+    ],
+    "client": [
+      "Nox.Mirror.Client"
     ]
   },
   "constraints": [
@@ -36,6 +39,14 @@
     {
       "type": "after",
       "id": "ui"
+    },
+    {
+      "type": "after",
+      "id": "scripting"
+    },
+    {
+      "type": "after",
+      "id": "sessions"
     }
   ],
   "relations": [
@@ -50,6 +61,18 @@
       "type": "depends",
       "version": ">=1.0.0",
       "register": "git+https://github.com/AtelierVR/nox.ui.git"
+    },
+    {
+      "id": "scripting",
+      "type": "depends",
+      "version": ">=1.0.0",
+      "register": "git+https://github.com/AtelierVR/nox.scripting.git"
+    },
+    {
+      "id": "sessions",
+      "type": "depends",
+      "version": ">=1.0.0",
+      "register": "git+https://github.com/AtelierVR/nox.sessions.git"
     },
     {
       "id": "com.unity.modules.xr",

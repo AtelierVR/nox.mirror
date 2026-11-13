@@ -1,14 +1,12 @@
-using System;
 using Nox.CCK.Language;
-using Nox.CCK.Mirror;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
 using Nox.Mirror.Settings;
+using Nox.Scripting;
 using Nox.Settings;
 
 namespace Nox.Mirror {
 	public class Main : IMainModInitializer {
-		static internal IHandler[] Settings = Array.Empty<IHandler>();
 		public static IMainModCoreAPI CoreAPI;
 		private LanguagePack _lang;
 
@@ -17,25 +15,24 @@ namespace Nox.Mirror {
 				.GetMod("settings")
 				.GetInstance<ISettingAPI>();
 
+		/// <summary>Registry the <c>mirror</c> scripting module is declared in.</summary>
+		public static IScriptingAPI ScriptingAPI
+			=> CoreAPI?.ModAPI
+				?.GetMod("scripting")
+				?.GetInstance<IScriptingAPI>();
+
 		public void OnInitializeMain(IMainModCoreAPI api) {
 			CoreAPI = api;
 			_lang   = api.AssetAPI.GetAsset<LanguagePack>("lang.asset");
 			LanguageManager.AddPack(_lang);
-
-			Settings = new IHandler[] {
-				new Resolution()
-			};
-
-			foreach (var setting in Settings)
-				SettingAPI.Add(setting);
-
-			MirrorSettings.Resolution = Resolution.Value;
+			MirrorSettingsRegistry.Register(SettingAPI);
+			ScriptingAPI?.RegisterModule(MirrorModule.Module);
 		}
 
 		public void OnDisposeMain() {
-			foreach (var setting in Settings)
-				SettingAPI.Remove(setting.Path);
-			Settings = Array.Empty<IHandler>();
+			ScriptingAPI?.UnregisterModule(MirrorModule.Module);
+			ConfigDebounce.Flush();
+			MirrorSettingsRegistry.Unregister(SettingAPI);
 			LanguageManager.RemovePack(_lang);
 			CoreAPI = null;
 		}

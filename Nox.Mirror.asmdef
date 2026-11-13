@@ -1,14 +1,22 @@
-{
+﻿{
     "name": "Nox.Mirror",
     "rootNamespace": "",
     "references": [
+        "Nox.CCK.Assets",
         "UniTask",
         "Unity.Mathematics",
         "Unity.RenderPipelines.Universal.Runtime",
         "Nox.CCK",
+        "Nox.Interactions",
+        "Nox.CCK.Interactions",
         "Nox.CCK.Settings",
         "Nox.Settings",
-        "Nox.CCK.Mirror"
+        "Nox.CCK.Mirror",
+        "Nox.UI",
+        "Nox.Scripting",
+        "Nox.CCK.Scripting",
+        "Nox.Sessions",
+        "Nox.Entities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
