@@ -15,13 +15,45 @@ MonoBehaviour:
   languages:
   - IETF: en-US
     entries:
-    - key: settings.group.graphic.mirror.label
-      value: "Mirror"
-    - key: settings.entry.graphic.mirror.resolution.label
+    - key: settings.entry.mirror.general.resolution.label
       value: "Resolution"
+    - key: settings.entry.mirror.personal.width.label
+      value: "Width"
+    - key: settings.entry.mirror.personal.height.label
+      value: "Height"
+    - key: settings.entry.mirror.personal.reflections.label
+      value: "Reflections"
+    - key: settings.entry.mirror.personal.borders.label
+      value: "Frame"
+    - key: settings.mirror.multi.option
+      value: "{0}"
+    - key: settings.entry.mirror.personal.centre_on_grab.label
+      value: "Centre on the cursor when grabbed"
+    - key: settings.entry.mirror.personal.grab_mode.label
+      value: "Grab"
+    - key: settings.entry.mirror.personal.grab_mode.option.hold
+      value: "Hold"
+    - key: settings.entry.mirror.personal.grab_mode.option.toggle
+      value: "Toggle"
   - IETF: fr-FR
     entries:
-    - key: settings.group.graphic.mirror.label
-      value: "Miroir"
-    - key: settings.entry.graphic.mirror.resolution.label
+    - key: settings.entry.mirror.general.resolution.label
       value: "Résolution"
+    - key: settings.entry.mirror.personal.width.label
+      value: "Largeur"
+    - key: settings.entry.mirror.personal.height.label
+      value: "Hauteur"
+    - key: settings.entry.mirror.personal.reflections.label
+      value: "Reflets"
+    - key: settings.entry.mirror.personal.borders.label
+      value: "Cadre"
+    - key: settings.mirror.multi.option
+      value: "{0}"
+    - key: settings.entry.mirror.personal.centre_on_grab.label
+      value: "Centrer sur le curseur au grab"
+    - key: settings.entry.mirror.personal.grab_mode.label
+      value: "Grab"
+    - key: settings.entry.mirror.personal.grab_mode.option.hold
+      value: "Maintenir"
+    - key: settings.entry.mirror.personal.grab_mode.option.toggle
+      value: "Basculer"
