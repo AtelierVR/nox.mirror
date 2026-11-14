@@ -71,6 +71,16 @@ namespace Nox.CCK.Mirror {
 		private static bool s_IsRendering;
 		private const string MirrorShaderName = "Nox/MirrorShader";
 
+		/// <summary>
+		/// First mirror camera taken out of the XR eyes. The next ones inherit the value from it:
+		/// <see cref="Camera.CopyFrom"/> reads <c>stereoTargetEye</c> without logging, where writing that property
+		/// under a scriptable render pipeline makes Unity log a warning with a full stack trace on every call.
+		/// </summary>
+		private static Camera s_EyeMaskSource;
+
+		/// <summary>Whether this mirror already took its camera out of the XR eyes.</summary>
+		private bool _eyeMaskApplied;
+
 		/// <summary>Frustum planes of the camera being rendered, reused (CalculateFrustumPlanes allocates).</summary>
 		private readonly Plane[] _frustum = new Plane[6];
 
@@ -131,7 +141,7 @@ namespace Nox.CCK.Mirror {
 
 			_mirrorCamera = go.GetComponent<Camera>();
 			_mirrorCamera.enabled = false;
-			_mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
+			_eyeMaskApplied = false;
 
 			// Add URP camera data
 			var urpData = go.AddComponent<UniversalAdditionalCameraData>();
@@ -153,13 +163,14 @@ namespace Nox.CCK.Mirror {
 			}
 
 			var maxSize = cam.stereoEnabled
-				? Mathf.Min(_maxResolution, MirrorSettings.StereoMaxResolution)
+				? Mathf.Min(_maxResolution, Mathf.RoundToInt(MirrorSettings.StereoMaxResolution * ResolutionScale))
 				: _maxResolution;
 
-			var w = Mathf.Clamp((int)(sourceWidth * ResolutionScale), 64, maxSize);
-			var h = Mathf.Clamp((int)(sourceHeight * ResolutionScale), 64, maxSize);
+			var ratio = Mathf.Min(ResolutionScale, maxSize / (float)Mathf.Max(sourceWidth, sourceHeight));
 
-			// Check if we need to update textures
+			var w = Mathf.Clamp(Mathf.RoundToInt(sourceWidth * ratio), 64, maxSize);
+			var h = Mathf.Clamp(Mathf.RoundToInt(sourceHeight * ratio), 64, maxSize);
+
 			var sizeChanged = _lastTextureWidth != w || _lastTextureHeight != h;
 
 			if (!_reflectionTextureLeft || sizeChanged) {
@@ -233,9 +244,9 @@ namespace Nox.CCK.Mirror {
 			EnsureMirrorCamera();
 			EnsureRenderTextures(cam);
 
-			_mirrorCamera.CopyFrom(cam);
+			ApplyEyeMask(cam);
+			SyncSettings(cam);
 			_mirrorCamera.enabled = false;
-			_mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
 
 			var pixelLightCount = QualitySettings.pixelLightCount;
 			if (_disablePixelLights)
@@ -268,6 +279,56 @@ namespace Nox.CCK.Mirror {
 				if (_disablePixelLights)
 					QualitySettings.pixelLightCount = pixelLightCount;
 			}
+		}
+
+		/// <summary>
+		/// Takes the mirror camera out of the XR eyes, once, and only when the camera it reflects really renders in
+		/// stereo: the value means nothing otherwise and writing it always logs a warning (see
+		/// <see cref="s_EyeMaskSource"/>). A mirror submits its own render request, so its camera must never render
+		/// into an eye texture.
+		/// </summary>
+		private void ApplyEyeMask(Camera cam) {
+			if (_eyeMaskApplied || !cam.stereoEnabled)
+				return;
+
+			_eyeMaskApplied = true;
+
+			if (s_EyeMaskSource && s_EyeMaskSource.stereoTargetEye == StereoTargetEyeMask.None) {
+				_mirrorCamera.CopyFrom(s_EyeMaskSource);
+				_mirrorCamera.enabled = false;
+				return;
+			}
+
+			_mirrorCamera.stereoTargetEye = StereoTargetEyeMask.None;
+			s_EyeMaskSource = _mirrorCamera;
+		}
+
+		/// <summary>
+		/// Copies the settings of the source camera the reflection needs. <see cref="Camera.CopyFrom"/> is not used
+		/// per frame: it also copies <c>stereoTargetEye</c>, which the mirror has to keep at <c>None</c>, and
+		/// writing that property back under a scriptable render pipeline makes Unity log a warning with a full
+		/// stack trace on every frame - 8 KB of garbage and ~0.35 ms of a 7 ms frame (profiler capture of
+		/// 2026-11-14). The fields below are the ones <c>CopyFrom</c> set that a reflection uses; the rest of the
+		/// mirror camera is driven explicitly by <see cref="RenderEye"/>.
+		/// </summary>
+		private void SyncSettings(Camera cam) {
+			_mirrorCamera.cameraType             = cam.cameraType;
+			_mirrorCamera.clearFlags             = cam.clearFlags;
+			_mirrorCamera.backgroundColor        = cam.backgroundColor;
+			_mirrorCamera.cullingMask            = cam.cullingMask;
+			_mirrorCamera.nearClipPlane          = cam.nearClipPlane;
+			_mirrorCamera.farClipPlane           = cam.farClipPlane;
+			_mirrorCamera.fieldOfView            = cam.fieldOfView;
+			_mirrorCamera.aspect                 = cam.aspect;
+			_mirrorCamera.orthographic           = cam.orthographic;
+			_mirrorCamera.orthographicSize       = cam.orthographicSize;
+			_mirrorCamera.depth                  = cam.depth;
+			_mirrorCamera.rect                   = cam.rect;
+			_mirrorCamera.allowHDR               = cam.allowHDR;
+			_mirrorCamera.allowMSAA              = cam.allowMSAA;
+			_mirrorCamera.allowDynamicResolution = cam.allowDynamicResolution;
+			_mirrorCamera.useOcclusionCulling    = cam.useOcclusionCulling;
+			_mirrorCamera.renderingPath          = cam.renderingPath;
 		}
 
 		private void RenderEye(Camera sourceCam, Camera.StereoscopicEye eye, RenderTexture target) {
