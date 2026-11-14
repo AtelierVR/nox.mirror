@@ -47,7 +47,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e79cb8930f34c97be525649c2d0da82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Nox.CCK.Mirror::Nox.CCK.Mirror.Mirror
+  _useResolutionSettings: 1
   _resolutionScale: 1
+  _useReflectionLayersSettings: 0
   _maxResolution: 2048
   _reflectionLayers:
     serializedVersion: 2
@@ -109,6 +111,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!64 &5817646583433164845
 MeshCollider:
