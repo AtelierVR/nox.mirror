@@ -29,7 +29,7 @@ namespace Nox.Mirror {
 		/// <summary>Raised when a panel is taken out (<c>true</c>) or removed (<c>false</c>).</summary>
 		public static readonly UnityEvent<bool> OnSpawnChanged = new();
 
-		/// <summary>Whether the current session allows the personal mirror (allowed when it has no opinion).</summary>
+		/// <summary>Whether the session allows the personal mirror (allowed when it has no opinion).</summary>
 		public static bool Allowed
 			=> MirrorModule.Personal(MirrorModule.CurrentSession);
 
@@ -40,6 +40,22 @@ namespace Nox.Mirror {
 		/// <summary>Whether a personal mirror is spawned.</summary>
 		public static bool IsSpawned
 			=> Current != null;
+
+		/// <summary>
+		/// Applies the answer of the settings and of the session: the panel follows the Enable setting - taken in
+		/// front of the player when it is on, removed when it is off - and a session that refuses it removes the
+		/// panel whatever the setting says.
+		/// </summary>
+		public static void Apply() {
+			var allowed = Allowed;
+
+			if (!allowed || !MirrorSettings.Enabled)
+				Despawn();
+			else
+				Spawn();
+
+			OnAllowedChanged.Invoke(allowed);
+		}
 
 		/// <summary>
 		/// Applies the settings again on the panel that is spawned, if any. Called by the settings: the panel
@@ -57,7 +73,12 @@ namespace Nox.Mirror {
 		/// </summary>
 		/// <returns>The panel, or <c>null</c> when it could not be taken.</returns>
 		public static PersonalMirror Spawn() {
-			if (!Allowed)
+			if (!Application.isPlaying || !Allowed)
+				return null;
+
+			// No view yet (the client starts before the rig): a panel placed now would sit at the origin, the
+			// next Apply takes it in front of the player instead.
+			if (!View)
 				return null;
 
 			if (Current is { } spawned) {
@@ -82,16 +103,13 @@ namespace Nox.Mirror {
 
 		/// <summary>
 		/// Takes the personal mirror in front of the player, or removes the one already spawned: what a click on
-		/// the widget of the player menu does.
+		/// the widget of the player menu does. The widget is the Enable setting, so the click flips it and the
+		/// panel follows.
 		/// </summary>
 		/// <returns>The panel when one was taken, <c>null</c> when it was removed or refused.</returns>
 		public static PersonalMirror Toggle() {
-			if (IsSpawned) {
-				Despawn();
-				return null;
-			}
-
-			return Spawn();
+			Settings.MirrorEnabled.Value = !IsSpawned;
+			return Current;
 		}
 
 		/// <summary>Removes the spawned panels.</summary>

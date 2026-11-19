@@ -59,7 +59,7 @@ namespace Nox.Mirror {
 			if (current != null)
 				current.Data.OnChanged.AddListener(OnDataChanged);
 
-			Check(MirrorModule.Personal(current));
+			PersonalMirrorSpawner.Apply();
 		}
 
 		/// <summary>The current session changed one of its values: only the personal mirror flag matters.</summary>
@@ -67,17 +67,8 @@ namespace Nox.Mirror {
 		/// <param name="value">New value.</param>
 		/// <param name="previous">Previous value.</param>
 		private static void OnDataChanged(string[] key, object value, object previous) {
-			if (MirrorModule.IsPersonal(key) && value is bool allowed)
-				Check(allowed);
-		}
-
-		/// <summary>Applies the answer of the session: the panel goes away when it refuses it.</summary>
-		/// <param name="allowed">Whether the personal mirror is allowed.</param>
-		private static void Check(bool allowed) {
-			if (!allowed)
-				PersonalMirrorSpawner.Despawn();
-
-			PersonalMirrorSpawner.OnAllowedChanged.Invoke(allowed);
+			if (MirrorModule.IsPersonal(key) && value is bool)
+				PersonalMirrorSpawner.Apply();
 		}
 
 		/// <summary>Answers the widget request of the player menu with the personal mirror button.</summary>

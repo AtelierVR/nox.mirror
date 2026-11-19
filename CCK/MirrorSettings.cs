@@ -46,6 +46,9 @@ namespace Nox.CCK.Mirror {
 		/// <summary>Scale applied to the screen resolution of the reflection (0.1 - 2).</summary>
 		public static float Resolution = 1f;
 
+		/// <summary>Whether the personal mirror is available at all: off, no panel can be taken.</summary>
+		public static bool Enabled = true;
+
 		/// <summary>Whether a grab puts the mirror on the grab point, turned towards the grabber.</summary>
 		public static bool CentreOnGrab = true;
 

@@ -27,6 +27,7 @@ namespace Nox.Mirror.Settings {
 
 			// Built in display order: the "General" section first, then the "Personal" one.
 			_handlers = new IHandler[] {
+				new MirrorEnabled(),
 				new Resolution(),
 				new MirrorWidth(),
 				new MirrorHeight(),
@@ -47,6 +48,7 @@ namespace Nox.Mirror.Settings {
 		/// mask when they are built (and on every change), they only need their rows here.
 		/// </summary>
 		public static void Push() {
+			MirrorSettings.Enabled      = MirrorEnabled.Value;
 			MirrorSettings.Resolution   = Resolution.Value;
 			MirrorSettings.Width        = MirrorWidth.Value;
 			MirrorSettings.Height       = MirrorHeight.Value;

@@ -15,6 +15,8 @@ MonoBehaviour:
   languages:
   - IETF: en-US
     entries:
+    - key: settings.entry.mirror.general.enabled.label
+      value: "Enable"
     - key: settings.entry.mirror.general.resolution.label
       value: "Resolution"
     - key: settings.entry.mirror.personal.width.label
@@ -37,6 +39,8 @@ MonoBehaviour:
       value: "Toggle"
   - IETF: fr-FR
     entries:
+    - key: settings.entry.mirror.general.enabled.label
+      value: "Activer"
     - key: settings.entry.mirror.general.resolution.label
       value: "Résolution"
     - key: settings.entry.mirror.personal.width.label
