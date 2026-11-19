@@ -37,8 +37,6 @@ namespace Nox.CCK.Mirror {
 			_mirror = GetComponent<Mirror>();
 			_mirror?.UseSettings();
 
-			MotionEnabled = false;
-
 			OnReleasedEvent.AddListener(OnReleased);
 
 			ApplySettings();

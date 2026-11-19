@@ -9,16 +9,24 @@ namespace Nox.CCK.Mirror {
 	/// </summary>
 	public partial class PersonalMirror {
 		/// <summary>
+		/// The panel places itself on its grab point (see <see cref="FollowPoint"/>), so its body is written directly instead
+		/// of being driven by the hold servo, which would only chase the grip.
+		/// </summary>
+		protected override bool KeepBodyDynamic
+			=> false;
+
+		/// <summary>
 		/// With <see cref="MirrorSettings.CentreOnGrab"/> the mirror is put on the grab point - the cursor of the
-		/// grab - and turned so its normal (the up axis, see <see cref="Mirror"/>) points back at the grabber:
+		/// ray - and turned so its normal (the up axis, see <see cref="Mirror"/>) points back at the grabber:
 		/// the centre of the mirror is under the cursor and the mirror looks at its grab origin.
 		/// <para>
-		/// Otherwise it rides the grab point like any prop (see <see cref="GrabbableBase"/>).
+		/// Only a ray does that: a hand keeps the grip it caught it with, so the panel stays in the palm where it
+		/// was taken and rides it like any prop (see <see cref="GrabbableBase"/>).
 		/// </para>
 		/// </summary>
-		protected override void FollowPoint(Transform point, GrabMode followMode, float deltaTime) {
-			if (!MirrorSettings.CentreOnGrab) {
-				base.FollowPoint(point, followMode, deltaTime);
+		protected override void FollowPoint(Transform point, float deltaTime) {
+			if (!MirrorSettings.CentreOnGrab || !FromRay) {
+				base.FollowPoint(point, deltaTime);
 				return;
 			}
 
@@ -27,6 +35,10 @@ namespace Nox.CCK.Mirror {
 
 			transform.SetPositionAndRotation(point.position, Facing(point, transform.rotation));
 		}
+
+		/// <summary>Whether the panel is carried at a distance by a ray, the grab that has a cursor to centre on.</summary>
+		private bool FromRay
+			=> Driver is { Kind: GrabKind.Indirect };
 
 		/// <summary>Stops the body where it is, so the mirror stays in place instead of falling.</summary>
 		private void FreezeBody() {
